@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hotel Registration System</title>
+<style>
+:root{--bg:#eef2f3;--ink:#14262b;--mut:#5d6f73;--line:#cfdadc;--card:#fff;--brand:#1f6f6b;--bad:#b3261e;
+--available:#2e7d4f;--allocated:#b7791f;--occupied:#2b5fa8;--maintenance:#6b7478}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+h1,h2{font-family:Georgia,serif;margin:0}
+[hidden]{display:none!important}
+body[data-role="manager"] .recep-only,body[data-role="receptionist"] .mgr-only{display:none!important}
+header{display:flex;justify-content:space-between;align-items:center;padding:14px 24px;background:var(--ink);color:#fff;flex-wrap:wrap;gap:8px}
+header span{color:#b9cdd0;margin-right:12px}
+main{max-width:1000px;margin:0 auto;padding:20px}
+nav{display:flex;gap:6px;margin-bottom:16px}
+nav button{background:none;border:0;border-bottom:3px solid transparent;padding:8px 14px;font:inherit;cursor:pointer;color:var(--mut)}
+nav button.on{color:var(--ink);border-color:var(--brand);font-weight:600}
+section{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:18px;margin-bottom:16px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+label{display:flex;flex-direction:column;font-size:13px;color:var(--mut);gap:3px;flex:1;min-width:150px}
+input,select,button{font:inherit}
+input,select{padding:8px;border:1px solid var(--line);border-radius:4px;color:var(--ink);background:#fff}
+button{padding:8px 14px;border:0;border-radius:4px;background:var(--brand);color:#fff;cursor:pointer}
+button.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:12px}
+.room{border:1px solid var(--line);border-left:6px solid var(--maintenance);border-radius:4px;padding:10px;display:flex;flex-direction:column;gap:2px}
+.room b{font-size:20px}.room em{font-style:normal;font-size:13px;font-weight:600}
+.room.available{border-left-color:var(--available)}.room.available em{color:var(--available)}
+.room.allocated{border-left-color:var(--allocated)}.room.allocated em{color:var(--allocated)}
+.room.occupied{border-left-color:var(--occupied)}.room.occupied em{color:var(--occupied)}
+.room button{margin-top:6px;padding:4px 8px;font-size:12px}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);font-size:14px}
+th{color:var(--mut);font-weight:600}
+td button{padding:4px 10px;font-size:13px;margin-right:4px}
+.muted{color:var(--mut)}
+.err{color:var(--bad);font-size:13px;min-height:18px;margin:6px 0 0}
+#login{max-width:340px;margin:12vh auto;padding:0 16px}
+#login form{display:flex;flex-direction:column;gap:12px;background:#fff;padding:22px;border:1px solid var(--line);border-radius:6px}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);padding:10px 18px;border-radius:4px;color:#fff;opacity:0;pointer-events:none;transition:opacity .2s}
+#toast.show{opacity:1}#toast.ok{background:var(--available)}#toast.bad{background:var(--bad)}
+</style>
+</head>
+<body>
+<div id="login">
+  <h1>Hotel Registration System</h1>
+  <p class="muted">Sign in with your staff account.</p>
+  <form id="loginForm">
+    <label>Email<input id="email" type="email" required autocomplete="username"></label>
+    <label>Password<input id="password" type="password" required autocomplete="current-password"></label>
+    <button>Sign in</button>
+  </form>
+</div>
+
+<div id="app" hidden>
+  <header><h1>Hotel Registration</h1><div><span id="who"></span><button class="ghost" id="logout">Sign out</button></div></header>
+  <main>
+    <nav>
+      <button data-tab="rooms" class="on">Rooms</button>
+      <button data-tab="guests">Guests</button>
+      <button data-tab="regs">Registrations</button>
+    </nav>
+
+    <div id="tab-rooms">
+      <section>
+        <h2>Room status</h2>
+        <p class="muted" id="roomSummary"></p>
+        <div class="grid" id="roomGrid"></div>
+      </section>
+      <section class="mgr-only">
+        <h2>Add a room</h2>
+        <form id="roomForm" class="row">
+          <label>Room number<input id="r-number" required></label>
+          <label>Room type<select id="r-type"><option>Single</option><option>Double</option><option>Suite</option></select></label>
+          <button>Add room</button>
+          <button type="button" class="ghost" id="seed">Add 8 sample rooms</button>
+        </form>
+        <p class="err" id="roomErr"></p>
+      </section>
+    </div>
+
+    <div id="tab-guests" hidden>
+      <section class="recep-only">
+        <h2 id="guestTitle">Register a guest</h2>
+        <form id="guestForm" class="row" novalidate>
+          <label>Full name<input id="g-name"></label>
+          <label>Phone<input id="g-phone" inputmode="tel"></label>
+          <label>Email (optional)<input id="g-email" type="email"></label>
+          <label>ID / passport number<input id="g-id"></label>
+          <button id="guestSave">Save guest</button>
+          <button type="button" class="ghost" id="guestCancel" hidden>Cancel edit</button>
+        </form>
+        <p class="err" id="guestErr"></p>
+      </section>
+      <section>
+        <h2>Guest records</h2>
+        <label>Search by name, phone or ID<input id="g-search"></label>
+        <table><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>ID</th><th class="recep-only"></th></tr></thead><tbody id="guestRows"></tbody></table>
+      </section>
+    </div>
+
+    <div id="tab-regs" hidden>
+      <section class="recep-only">
+        <h2>Allocate a room</h2>
+        <form id="regForm" class="row">
+          <label>Guest<select id="a-guest" required></select></label>
+          <label>Available room<select id="a-room" required></select></label>
+          <label>Expected checkout<input id="a-date" type="date" required></label>
+          <button>Allocate room</button>
+        </form>
+        <p class="err" id="regErr"></p>
+      </section>
+      <section>
+        <h2>Registrations</h2>
+        <table><thead><tr><th>Guest</th><th>Room</th><th>Status</th><th>Check-in</th><th>Expected out</th><th class="recep-only"></th></tr></thead><tbody id="regRows"></tbody></table>
+      </section>
+    </div>
+  </main>
+</div>
+<div id="toast" role="status"></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

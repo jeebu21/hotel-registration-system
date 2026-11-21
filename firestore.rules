@@ -9,12 +9,18 @@ service cloud.firestore {
     function isRecep() { return signedIn() && role() == 'receptionist'; }
     function isMgr()   { return signedIn() && role() == 'manager'; }
 
+    // A person may create their own profile once (at sign-up) with a valid role.
+    // There is no update rule, so nobody can change their role afterwards.
     match /users/{uid} {
       allow read: if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['name', 'email', 'role', 'createdAt'])
+        && request.resource.data.role in ['manager', 'receptionist']
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2;
     }
 
-    // Managers create and edit rooms. Receptionists may only change a room's status
-    // (needed when allocating, checking in and checking out).
+    // Managers create and edit rooms. Receptionists may only change a room's status.
     match /rooms/{id} {
       allow read: if isRecep() || isMgr();
       allow create, delete: if isMgr();
